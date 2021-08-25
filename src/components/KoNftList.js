@@ -1,8 +1,8 @@
-import React from 'react';
+import React, {Fragment} from 'react';
 
 const KoNftList = (props) => {
 
-  const {chainId, approve, deposit, burn} = props;
+  const {chainId, approve, deposit, burn, exit, burnTxHashList} = props;
 
   const depositHandle = (tokenId) => {
     deposit(tokenId);
@@ -16,6 +16,10 @@ const KoNftList = (props) => {
     burn(tokenId);
   }
 
+  const exitHandle = (idNft) => {
+    exit(idNft);
+  }
+
   /**
    * Render one nft
    * @param nft
@@ -24,42 +28,55 @@ const KoNftList = (props) => {
    */
   const renderNft = (idNft, index) => {
     return (
-      <tr key={index}>
-        <td>{idNft}</td>
-        <td>
-          {renderNftButtons(idNft)}
-        </td>
-      </tr>
+      <Fragment key={index}>
+        <tr>
+          <td>{idNft}</td>
+          <td>
+            {renderNftButtons(idNft)}
+          </td>
+        </tr>
+        <tr>
+          <td colSpan={2}>
+            {burnTxHashList[idNft] ? burnTxHashList[idNft].transactionHash : false}
+          </td>
+        </tr>
+      </Fragment>
     );
   }
 
   const renderNftButtons = (idNft) => {
-    if (chainId == 5){
-      return(
+    if (chainId == 5) {
+      return (
         <div>
-          <button onClick={()=>{approveHandle(idNft)}}>
+          <button onClick={() => {
+            approveHandle(idNft)
+          }}>
             Aprouve
           </button>
 
-          <button onClick={()=>{depositHandle(idNft)}}>
+          <button onClick={() => {
+            depositHandle(idNft)
+          }}>
             Deposit
           </button>
 
         </div>
       );
-    }else{
-      return(
+    } else {
+      return (
         <div>
-          <button onClick={()=>{approveHandle(idNft)}}>
-            Aprouve
+
+          <button onClick={() => {
+            burnHandle(idNft)
+          }}>
+            Burn
           </button>
 
-          <button onClick={()=>{depositHandle(idNft)}}>
-            Deposit
+          <button onClick={() => {
+            exitHandle(idNft)
+          }}>
+            Exit
           </button>
-
-          <button onClick={burnHandle}>Burn</button>
-          <button>Exit</button>
         </div>
       );
     }
@@ -81,7 +98,7 @@ const KoNftList = (props) => {
       </tr>
       </thead>
       <tbody>
-        {renderNftList()}
+      {renderNftList()}
       </tbody>
     </table>
   );

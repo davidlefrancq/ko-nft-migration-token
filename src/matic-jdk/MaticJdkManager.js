@@ -31,7 +31,7 @@ class MaticJdkManager {
    * @param tokenId
    * @returns {Promise}
    */
-  approveERC721ForDeposit(contractAddress, from, tokenId){
+  approveERC721ForDeposit(contractAddress, from, tokenId) {
     return this.maticPOSClient.approveERC721ForDeposit(contractAddress, tokenId, {
       from,
     });
@@ -49,12 +49,23 @@ class MaticJdkManager {
   }
 
   /**
+   * Burn token on TokenChildContract
    * @param contractAddress
    * @param tokenId
    * @returns {Promise}
    */
-  burnERC721(contractAddress, tokenId) {
-    return this.maticPOSClient.burnERC721(contractAddress, tokenId);
+  burnERC721(contractAddress, tokenId, from) {
+    return this.maticPOSClient.burnERC721(contractAddress, tokenId, {from});
+  }
+
+  /**
+   * Releases the locked tokens and refunds it to the Users account on Ethereum
+   * @param burnTxHash
+   * @param from
+   * @returns {*}
+   */
+  exitERC721(burnTxHash, from) {
+    return this.maticPOSClient.exitERC721(burnTxHash, {from});
   }
 
 }

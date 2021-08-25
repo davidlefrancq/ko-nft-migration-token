@@ -41,6 +41,7 @@ class KoNftMigration extends Component {
       balanceOf: 0,
       nftList: [],
       chainId: 0,
+      burnTxHashList: [],
     };
 
     this.childProvider = new ethers.providers.JsonRpcProvider(maticProvider);
@@ -57,33 +58,50 @@ class KoNftMigration extends Component {
     });
   }
 
+  exit = (idNft) => {
+
+    const {transactionHash} = this.state.burnTxHashList[idNft];
+    console.log({transactionHash});
+
+    if (transactionHash && transactionHash !== "") {
+      if (parseInt(this.state.chainId) === 80001) {
+        // Here we are on Mumbai Network
+        console.log(`Releases the locked tokens and refunds it to the Users account on Ethereum for txHash : ${transactionHash}`);
+
+        this.maticJdkManager.exitERC721(transactionHash, from).then((exitTx) => {
+          console.log({exitTx});
+          this.refresh();
+        }).catch((error) => {
+          console.error(error);
+        })
+      }
+    }
+  }
+
   /**
    * Burn a token
    * @param tokenId
    */
   burn = (tokenId) => {
 
-    if (parseInt(this.state.chainId) == 5) {
-      // Here we are on Goerli Network
-      console.log(`Burn Token ${tokenId} in Ethereum Contract`);
-
-      this.maticJdkManager.burnERC721(contractAddress.root, tokenId).then((burnTx) => {
-        console.log({burnTx});
-      }).catch((error) => {
-        console.error(error);
-      })
-
-    } else if (parseInt(this.state.chainId) == 80001) {
+    if (parseInt(this.state.chainId) === 80001) {
       // Here we are on Mumbai Network
       console.log(`Burn Token ${tokenId} in Polygon Contract`);
 
-      this.maticJdkManager.burnERC721(contractAddress.child, tokenId).then((burnTx) => {
+      this.maticJdkManager.burnERC721(contractAddress.child, tokenId, from).then((burnTx) => {
         console.log({burnTx});
+        this.addBurnTxHash(tokenId, burnTx);
+
       }).catch((error) => {
         console.error(error);
       })
-
     }
+  }
+
+  addBurnTxHash = (tokenId, burnTx) => {
+    const state = {...this.state};
+    state.burnTxHashList[tokenId] = burnTx;
+    this.setState(state);
   }
 
   /**
@@ -92,26 +110,16 @@ class KoNftMigration extends Component {
    */
   deposit = (tokenId) => {
 
-    if (parseInt(this.state.chainId) == 5) {
+    if (parseInt(this.state.chainId) === 5) {
       // Here we are on Goerli Network
       console.log(`Deposit Token ${tokenId} in Ethereum Contract`);
 
       this.maticJdkManager.depositERC721ForUser(contractAddress.root, from, tokenId).then((depositTx) => {
         console.log({depositTx});
+        this.refresh();
       }).catch((error) => {
         console.error(error);
       })
-
-    } else if (parseInt(this.state.chainId) == 80001) {
-      // Here we are on Mumbai Network
-      console.log(`Deposit Token ${tokenId} in Polygon Contract`);
-
-      this.maticJdkManager.depositERC721ForUser(contractAddress.child, from, tokenId).then((depositTx) => {
-        console.log({depositTx});
-      }).catch((error) => {
-        console.error(error);
-      })
-
     }
   }
 
@@ -121,21 +129,11 @@ class KoNftMigration extends Component {
    */
   approve = (tokenId) => {
 
-    if (parseInt(this.state.chainId) == 5) {
+    if (parseInt(this.state.chainId) === 5) {
       // Here we are on Goerli Network
       console.log(`Approve Token ${tokenId} in Ethereum Contract`);
 
       this.maticJdkManager.approveERC721ForDeposit(contractAddress.root, from, tokenId).then((approveTx) => {
-        console.log({approveTx});
-      }).catch((error) => {
-        console.error(error);
-      });
-
-    } else if (parseInt(this.state.chainId) == 80001) {
-      // Here we are on Mumbai Network
-      console.log(`Approve Token ${tokenId} in Polygon Contract`);
-
-      this.maticJdkManager.approveERC721ForDeposit(contractAddress.child, from, tokenId).then((approveTx) => {
         console.log({approveTx});
       }).catch((error) => {
         console.error(error);
@@ -229,7 +227,7 @@ class KoNftMigration extends Component {
         }
 
         this.setNftList(nftList);
-      }else{
+      } else {
         this.setNftList([]);
       }
     });
@@ -307,6 +305,8 @@ class KoNftMigration extends Component {
           approve={this.approve}
           deposit={this.deposit}
           burn={this.burn}
+          exit={this.exit}
+          burnTxHashList={this.state.burnTxHashList}
         />
 
       </div>
