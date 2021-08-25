@@ -1,23 +1,15 @@
-import logo from './logo.svg';
 import './App.css';
+import ConnectWeb3 from "./components/ConnectWeb3";
+import KoNftMigration from "./components/KoNftMigration";
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+
+      <ConnectWeb3/>
+
+      <KoNftMigration/>
+
     </div>
   );
 }
