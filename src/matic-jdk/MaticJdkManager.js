@@ -7,7 +7,7 @@ const parentRpc = `https://goerli.infura.io/v3/${INFURA_PROJECT_ID}`;
 const childRpc = 'https://rpc-mumbai.maticvigil.com/v1/339bfd1060db13f0f39cac79e2cca45b637c93e9';
 
 const privateKey = "91498f38aac05ac896d02a825f33639c60768c9b7e9de9563e143759372c9f45";
-const userAddress = "0x43e6B95803ac909f31C46517691cd2e33e298e40";
+const walletAddress = "0x43e6B95803ac909f31C46517691cd2e33e298e40";
 
 class MaticJdkManager {
 
@@ -19,8 +19,8 @@ class MaticJdkManager {
       version: "mumbai",
       parentProvider: new HDWalletProvider(privateKey, parentRpc),
       maticProvider: new HDWalletProvider(privateKey, childRpc),
-      parentDefaultOptions: {from: userAddress},
-      maticDefaultOptions: {from: userAddress},
+      parentDefaultOptions: {from: walletAddress},
+      maticDefaultOptions: {from: walletAddress},
     });
   }
 

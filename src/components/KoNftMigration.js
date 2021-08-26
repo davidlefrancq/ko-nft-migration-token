@@ -18,8 +18,15 @@ const maticProvider = 'https://rpc-mumbai.maticvigil.com/v1/339bfd1060db13f0f39c
 const ethereumProvider = `https://goerli.infura.io/v3/${INFURA_PROJECT_ID}`;
 
 const contractAddress = {
+
+  // NFT0
   root: "0x3Ad9a856eDcACFCBF2d4A32194C9e2DbDA4E35Ee",
   child: "0x65061e7c2CDa20Adf3c80Ec61621E0Fca9D1d862",
+
+  // NFT1
+  // root: "0x166831F5ad0cE26Dc08AF1BB15648B0d57619471",
+  // child: "0x241C3B779eD19D8C659B505e76b7ffA7b57662Bc",
+
   childChainManagerProxy: "0xb5505a6d998549090530911180f38aC5130101c6",
 };
 
@@ -60,7 +67,9 @@ class KoNftMigration extends Component {
 
   exit = (idNft) => {
 
-    const {transactionHash} = this.state.burnTxHashList[idNft];
+    // const {transactionHash} = this.state.burnTxHashList[idNft];
+    const transactionHash = "0x3b98547422c9b49a34b7ef55b5febfa6d81bf4c9705f99879199662081c8da62";
+    // const transactionHash = "0x6183537409978b4487856f042d70954496ba4ef5aa57f9a2648ad7b95667df0c";
     console.log({transactionHash});
 
     if (transactionHash && transactionHash !== "") {
@@ -274,7 +283,7 @@ class KoNftMigration extends Component {
   }
 
   handleMint = () => {
-    this.sendMintNFT({uriNFT})
+    this.sendMintNFT({uriNFT});
   }
 
   render() {
