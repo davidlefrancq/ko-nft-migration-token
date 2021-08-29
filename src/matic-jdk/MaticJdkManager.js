@@ -1,13 +1,26 @@
 import {MaticPOSClient} from "@maticnetwork/maticjs";
 import HDWalletProvider from "@truffle/hdwallet-provider";
 
-const INFURA_PROJECT_ID = "2980c008ba994861a926e1ef6b352f10";
+const {
+  WALLET_PRIVATE_KEY,
+  WALLET_ADDRESS,
+  INFURA_PROJECT_ID,
+  MATIC_VIGIL_APP_ID,
+  GOERLI_RPC,
+  MUMBAI_RPC,
+} = window.env;
 
-const parentRpc = `https://goerli.infura.io/v3/${INFURA_PROJECT_ID}`;
-const childRpc = 'https://rpc-mumbai.maticvigil.com/v1/339bfd1060db13f0f39cac79e2cca45b637c93e9';
+const parentRpc = `${GOERLI_RPC}${INFURA_PROJECT_ID}`;
+const childRpc = `${MUMBAI_RPC}${MATIC_VIGIL_APP_ID}`;
 
-const privateKey = "91498f38aac05ac896d02a825f33639c60768c9b7e9de9563e143759372c9f45";
-const walletAddress = "0x43e6B95803ac909f31C46517691cd2e33e298e40";
+const privateKey = WALLET_PRIVATE_KEY;
+const walletAddress = WALLET_ADDRESS;
+
+console.log(process.env);
+console.log({parentRpc});
+console.log({childRpc});
+console.log({privateKey});
+console.log({walletAddress});
 
 class MaticJdkManager {
 

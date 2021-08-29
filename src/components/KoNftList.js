@@ -26,18 +26,14 @@ const KoNftList = (props) => {
    * @param index
    * @returns {JSX.Element}
    */
-  const renderNft = (idNft, index) => {
+  const renderNft = (nft, index) => {
     return (
       <Fragment key={index}>
         <tr>
-          <td>{idNft}</td>
+          <td>{nft.id}</td>
+          <td>{nft.uri}</td>
           <td>
-            {renderNftButtons(idNft)}
-          </td>
-        </tr>
-        <tr>
-          <td colSpan={2}>
-            {burnTxHashList[idNft] ? burnTxHashList[idNft].transactionHash : false}
+            {renderNftButtons(nft.id)}
           </td>
         </tr>
       </Fragment>
@@ -94,6 +90,7 @@ const KoNftList = (props) => {
       <thead>
       <tr>
         <th style={{borderBottom: "1px solid white"}}>ID</th>
+        <th style={{borderBottom: "1px solid white", textAlign: "start"}}>URI</th>
         <th style={{borderBottom: "1px solid white", textAlign: "start"}}>Actions</th>
       </tr>
       </thead>
