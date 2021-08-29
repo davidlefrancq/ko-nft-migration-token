@@ -16,12 +16,6 @@ const childRpc = `${MUMBAI_RPC}${MATIC_VIGIL_APP_ID}`;
 const privateKey = WALLET_PRIVATE_KEY;
 const walletAddress = WALLET_ADDRESS;
 
-console.log(process.env);
-console.log({parentRpc});
-console.log({childRpc});
-console.log({privateKey});
-console.log({walletAddress});
-
 class MaticJdkManager {
 
   maticPOSClient;

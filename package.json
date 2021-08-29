@@ -46,7 +46,9 @@
       "INFURA_PROJECT_ID",
       "MATIC_VIGIL_APP_ID",
       "GOERLI_RPC",
-      "MUMBAI_RPC"
+      "MUMBAI_RPC",
+      "ETHEREUM_CONTRACT_ADDRESS",
+      "SOLIDITY_CONTRACT_ADDRESS"
     ]
   }
 }

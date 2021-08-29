@@ -2,7 +2,7 @@ import React, {Fragment} from 'react';
 
 const KoNftList = (props) => {
 
-  const {chainId, approve, deposit, burn, exit, burnTxHashList} = props;
+  const {chainId, approve, deposit, burn, exit} = props;
 
   const depositHandle = (tokenId) => {
     deposit(tokenId);
@@ -41,7 +41,7 @@ const KoNftList = (props) => {
   }
 
   const renderNftButtons = (idNft) => {
-    if (chainId == 5) {
+    if (chainId === 5) {
       return (
         <div>
           <button onClick={() => {

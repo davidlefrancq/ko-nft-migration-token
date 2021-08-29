@@ -18,7 +18,6 @@ const {
 
 const ethereumRPC = `${GOERLI_RPC}${INFURA_PROJECT_ID}`;
 const maticRPC = `${MUMBAI_RPC}${MATIC_VIGIL_APP_ID}`;
-
 const uriNFT = "ipfs://QmaQNPLWTSKNXCvzURSi3WrkywJ1qcnYC56Dw1XMrxYZ7Z";
 
 class KoNftMigration extends Component {
@@ -48,21 +47,21 @@ class KoNftMigration extends Component {
   }
 
   componentDidMount() {
+    this.initSigner();
     this.addEventListenerAccountsChanged()
     this.refresh();
   }
 
-  addEventListenerAccountsChanged() {
-    window.ethereum.addListener('accountsChanged', () => {
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
+  initSigner = () => {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    if (signer) {
       signer.getAddress().then((address) => {
         this.setSigner(signer, address);
-      }).catch((error)=>{
+      }).catch((error) => {
         console.log(error);
       });
-    });
+    }
   }
 
   setSigner = (signer, address) => {
@@ -71,6 +70,12 @@ class KoNftMigration extends Component {
     state.address = address;
     this.setState(state);
     this.refresh();
+  }
+
+  addEventListenerAccountsChanged() {
+    window.ethereum.addListener('accountsChanged', () => {
+      this.initSigner();
+    });
   }
 
   exit = (idNft) => {
@@ -201,13 +206,11 @@ class KoNftMigration extends Component {
         this.setChainId(chainId);
 
         // Instanciate contract
-        if (chainId == 5) {
-
+        if (chainId === 5) {
           this.contract = new ethers.Contract(ETHEREUM_CONTRACT_ADDRESS, abiRoot, this.parentProvider);
           console.log("contract", this.contract);
 
-        } else if (chainId == 80001) {
-
+        } else if (chainId === 80001) {
           this.contract = new ethers.Contract(SOLIDITY_CONTRACT_ADDRESS, abiChild, this.childProvider);
           console.log("contract", this.contract);
         }
@@ -224,10 +227,24 @@ class KoNftMigration extends Component {
 
   ethereumOnChainChanged = () => {
     window.ethereum.on('chainChanged', (chainId) => {
+      this.resetStateOnChangeChain();
       console.log({chainId});
       this.setChainId(chainId);
       this.refresh();
     });
+  }
+
+  resetStateOnChangeChain() {
+    this.contract = null;
+    const state = {...this.state};
+    state.signer = null;
+    state.from = null;
+    state.contractTotalSupply = 0;
+    state.balanceOf = 0;
+    state.nftList = [];
+    state.chainId = 0;
+    this.setState(state);
+    this.initSigner();
   }
 
   loadTotalSuply = () => {
@@ -334,8 +351,6 @@ class KoNftMigration extends Component {
 
   render() {
 
-    console.log({burnTxHashList: this.state.burnTxHashList})
-
     return (
       <div>
         <h2>Contract</h2>
@@ -364,7 +379,6 @@ class KoNftMigration extends Component {
           deposit={this.deposit}
           burn={this.burn}
           exit={this.exit}
-          burnTxHashList={this.state.burnTxHashList}
         />
 
         {this.renderBurnTransactionList()}

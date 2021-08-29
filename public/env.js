@@ -4,5 +4,7 @@ window.env = {
   "INFURA_PROJECT_ID": "2980c008ba994861a926e1ef6b352f10",
   "MATIC_VIGIL_APP_ID": "339bfd1060db13f0f39cac79e2cca45b637c93e9",
   "GOERLI_RPC": "https://goerli.infura.io/v3/",
-  "MUMBAI_RPC": "https://rpc-mumbai.maticvigil.com/v1/"
+  "MUMBAI_RPC": "https://rpc-mumbai.maticvigil.com/v1/",
+  "ETHEREUM_CONTRACT_ADDRESS": "0x3Ad9a856eDcACFCBF2d4A32194C9e2DbDA4E35Ee",
+  "SOLIDITY_CONTRACT_ADDRESS": "0x65061e7c2CDa20Adf3c80Ec61621E0Fca9D1d862"
 };
