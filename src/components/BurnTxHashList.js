@@ -14,6 +14,12 @@ const BurnTxHashList = (props) => {
           Exit
         </button>
 
+        <button onClick={() => {
+          //isERC721ExitProcessed
+        }}>
+          Processed
+        </button>
+
       </div>
     );
   }
@@ -34,7 +40,9 @@ const BurnTxHashList = (props) => {
   const renderBurnTxHashList = () => {
     if (burnTxHashList && burnTxHashList.length > 0) {
       return burnTxHashList.map((burnTxHash, index) => {
-        return renderBurnTxHash(burnTxHash, index);
+        if (burnTxHash) {
+          return renderBurnTxHash(burnTxHash, index);
+        }
       });
     }
   }

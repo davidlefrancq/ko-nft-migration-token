@@ -2,19 +2,21 @@ import {MaticPOSClient} from "@maticnetwork/maticjs";
 import HDWalletProvider from "@truffle/hdwallet-provider";
 
 const {
-  WALLET_PRIVATE_KEY,
-  WALLET_ADDRESS,
-  INFURA_PROJECT_ID,
-  MATIC_VIGIL_APP_ID,
-  GOERLI_RPC,
-  MUMBAI_RPC,
-} = window.env;
+  REACT_APP_WALLET_PRIVATE_KEY,
+  REACT_APP_WALLET_ADDRESS,
+  REACT_APP_INFURA_PROJECT_ID,
+  REACT_APP_MATIC_VIGIL_APP_ID,
+  REACT_APP_GOERLI_RPC,
+  REACT_APP_MUMBAI_RPC,
+} = process.env;
 
-const parentRpc = `${GOERLI_RPC}${INFURA_PROJECT_ID}`;
-const childRpc = `${MUMBAI_RPC}${MATIC_VIGIL_APP_ID}`;
+console.log("env",process.env);
 
-const privateKey = WALLET_PRIVATE_KEY;
-const walletAddress = WALLET_ADDRESS;
+const parentRpc = `${REACT_APP_GOERLI_RPC}${REACT_APP_INFURA_PROJECT_ID}`;
+const childRpc = `${REACT_APP_MUMBAI_RPC}${REACT_APP_MATIC_VIGIL_APP_ID}`;
+
+const privateKey = REACT_APP_WALLET_PRIVATE_KEY;
+const walletAddress = REACT_APP_WALLET_ADDRESS;
 
 class MaticJdkManager {
 
@@ -62,6 +64,7 @@ class MaticJdkManager {
    * @returns {Promise}
    */
   burnERC721(contractAddress, tokenId, from) {
+    console.log({contractAddress, tokenId, from});
     return this.maticPOSClient.burnERC721(contractAddress, tokenId, {from});
   }
 
@@ -72,7 +75,7 @@ class MaticJdkManager {
    * @returns {*}
    */
   exitERC721(burnTxHash, from) {
-    return this.maticPOSClient.exitERC721(burnTxHash, {from});
+    return this.maticPOSClient.exitERC721WithMetadata(burnTxHash, {from});
   }
 
 }

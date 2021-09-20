@@ -8,16 +8,16 @@ import BurnTxHashList from "./BurnTxHashList";
 import KoNFT from "../bo/KoNFT";
 
 const {
-  INFURA_PROJECT_ID,
-  MATIC_VIGIL_APP_ID,
-  GOERLI_RPC,
-  MUMBAI_RPC,
-  ETHEREUM_CONTRACT_ADDRESS,
-  SOLIDITY_CONTRACT_ADDRESS,
-} = window.env;
+  REACT_APP_INFURA_PROJECT_ID,
+  REACT_APP_MATIC_VIGIL_APP_ID,
+  REACT_APP_GOERLI_RPC,
+  REACT_APP_MUMBAI_RPC,
+  REACT_APP_ETHEREUM_CONTRACT_ADDRESS,
+  REACT_APP_POLYGON_CONTRACT_ADDRESS,
+} = process.env;
 
-const ethereumRPC = `${GOERLI_RPC}${INFURA_PROJECT_ID}`;
-const maticRPC = `${MUMBAI_RPC}${MATIC_VIGIL_APP_ID}`;
+const ethereumRPC = `${REACT_APP_GOERLI_RPC}${REACT_APP_INFURA_PROJECT_ID}`;
+const maticRPC = `${REACT_APP_MUMBAI_RPC}${REACT_APP_MATIC_VIGIL_APP_ID}`;
 const uriNFT = "ipfs://QmaQNPLWTSKNXCvzURSi3WrkywJ1qcnYC56Dw1XMrxYZ7Z";
 
 class KoNftMigration extends Component {
@@ -47,9 +47,25 @@ class KoNftMigration extends Component {
   }
 
   componentDidMount() {
-    this.initSigner();
-    this.addEventListenerAccountsChanged()
-    this.refresh();
+    this.initBurnTxHashList(() => {
+      this.initSigner();
+      this.addEventListenerAccountsChanged()
+      this.refresh();
+    });
+  }
+
+  initBurnTxHashList(callback) {
+    let burnTxHashList = JSON.parse(localStorage.getItem('burnTxHashList'));
+    // let burnTxHashList = localStorage.getItem('burnTxHashList');
+    console.log("burnTxHashList", burnTxHashList);
+    if (burnTxHashList) {
+      const state = {...this.state};
+      state.burnTxHashList = burnTxHashList;
+      this.setState(state, callback);
+    } else {
+      this.addBurnTxHash(4,{transactionHash: "0x4d658967255f686c46c278295db5ce0037741e43b5c52948c221df2200fddaac"})
+      callback();
+    }
   }
 
   initSigner = () => {
@@ -67,7 +83,7 @@ class KoNftMigration extends Component {
   setSigner = (signer, address) => {
     const state = {...this.state};
     state.signer = signer;
-    state.address = address;
+    state.from = address;
     this.setState(state);
     this.refresh();
   }
@@ -118,7 +134,7 @@ class KoNftMigration extends Component {
       // Here we are on Mumbai Network
       console.log(`Burn Token ${tokenId} in Polygon Contract`);
 
-      this.maticJdkManager.burnERC721(SOLIDITY_CONTRACT_ADDRESS, tokenId, this.state.from).then((burnTx) => {
+      this.maticJdkManager.burnERC721(REACT_APP_POLYGON_CONTRACT_ADDRESS, tokenId, this.state.from).then((burnTx) => {
         console.log({burnTx});
         this.addBurnTxHash(tokenId, burnTx);
 
@@ -131,7 +147,11 @@ class KoNftMigration extends Component {
   addBurnTxHash = (tokenId, burnTx) => {
     const state = {...this.state};
     state.burnTxHashList[tokenId] = burnTx;
-    this.setState(state);
+    this.setState(state, this.setLocalStorageBurnTxHash);
+  }
+
+  setLocalStorageBurnTxHash = () => {
+    localStorage.setItem('burnTxHashList', JSON.stringify(this.state.burnTxHashList));
   }
 
   /**
@@ -144,7 +164,7 @@ class KoNftMigration extends Component {
       // Here we are on Goerli Network
       console.log(`Deposit Token ${tokenId} in Ethereum Contract`);
 
-      this.maticJdkManager.depositERC721ForUser(ETHEREUM_CONTRACT_ADDRESS, this.state.from, tokenId).then((depositTx) => {
+      this.maticJdkManager.depositERC721ForUser(REACT_APP_ETHEREUM_CONTRACT_ADDRESS, this.state.from, tokenId).then((depositTx) => {
         console.log({depositTx});
         this.refresh();
       }).catch((error) => {
@@ -163,7 +183,7 @@ class KoNftMigration extends Component {
       // Here we are on Goerli Network
       console.log(`Approve Token ${tokenId} in Ethereum Contract`);
 
-      this.maticJdkManager.approveERC721ForDeposit(ETHEREUM_CONTRACT_ADDRESS, this.state.from, tokenId).then((approveTx) => {
+      this.maticJdkManager.approveERC721ForDeposit(REACT_APP_ETHEREUM_CONTRACT_ADDRESS, this.state.from, tokenId).then((approveTx) => {
         console.log({approveTx});
       }).catch((error) => {
         console.error(error);
@@ -181,7 +201,9 @@ class KoNftMigration extends Component {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
 
-    const resp = await this.contract.connect(signer)["mint(address,string)"](await signer.getAddress(), uriNFT);
+    const instanceContract = this.contract.connect(signer);
+    const resp = await instanceContract.mint(await signer.getAddress(), uriNFT);
+    // const resp = await this.contract.connect(signer)["mint(address,string)"](await signer.getAddress(), uriNFT);
 
     const tx = await resp.wait();
     console.log(tx);
@@ -207,11 +229,13 @@ class KoNftMigration extends Component {
 
         // Instanciate contract
         if (chainId === 5) {
-          this.contract = new ethers.Contract(ETHEREUM_CONTRACT_ADDRESS, abiRoot, this.parentProvider);
+          this.contract = new ethers.Contract(REACT_APP_ETHEREUM_CONTRACT_ADDRESS, abiRoot, this.parentProvider);
           console.log("contract", this.contract);
 
         } else if (chainId === 80001) {
-          this.contract = new ethers.Contract(SOLIDITY_CONTRACT_ADDRESS, abiChild, this.childProvider);
+          console.log({chainId});
+          console.log({REACT_APP_POLYGON_CONTRACT_ADDRESS});
+          this.contract = new ethers.Contract(REACT_APP_POLYGON_CONTRACT_ADDRESS, abiChild, this.childProvider);
           console.log("contract", this.contract);
         }
 
@@ -354,7 +378,7 @@ class KoNftMigration extends Component {
     return (
       <div>
         <h2>Contract</h2>
-        <div>{SOLIDITY_CONTRACT_ADDRESS}</div>
+        <div>{REACT_APP_POLYGON_CONTRACT_ADDRESS}</div>
         <div>{this.state.contractTotalSupply} NFT on Contract</div>
 
         <h2>NFT Menu</h2>
@@ -382,11 +406,6 @@ class KoNftMigration extends Component {
         />
 
         {this.renderBurnTransactionList()}
-
-        <button onClick={() => {
-          this.exitERC721("0x7be2856ceea663fcc194d1468d9a6f6d394ad1cc4e25ef4e4aa8c91de89038f6", this.state.from)
-        }}>Exit
-        </button>
 
       </div>
     );
