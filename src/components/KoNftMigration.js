@@ -1,32 +1,22 @@
 import React, {Component} from 'react';
-import {ethers} from 'ethers';
-import {abi as abiChild} from "../artifacts/contracts/KoChildMintableERC721/KoChildMintableERC721.json";
-import {abi as abiRoot} from "../artifacts/contracts/KoMintableERC721/KoMintableERC721.json";
 import KoNftList from "./KoNftList";
-import MaticJdkManager from "../matic-jdk/MaticJdkManager";
 import BurnTxHashList from "./BurnTxHashList";
 import KoNFT from "../bo/KoNFT";
+import Spinner from "./Spinner";
+import {VscFileBinary} from "react-icons/all";
 
 const {
-  REACT_APP_INFURA_PROJECT_ID,
-  REACT_APP_MATIC_VIGIL_APP_ID,
-  REACT_APP_GOERLI_RPC,
-  REACT_APP_MUMBAI_RPC,
   REACT_APP_ETHEREUM_CONTRACT_ADDRESS,
   REACT_APP_POLYGON_CONTRACT_ADDRESS,
 } = process.env;
 
-const ethereumRPC = `${REACT_APP_GOERLI_RPC}${REACT_APP_INFURA_PROJECT_ID}`;
-const maticRPC = `${REACT_APP_MUMBAI_RPC}${REACT_APP_MATIC_VIGIL_APP_ID}`;
 const uriNFT = "ipfs://QmaQNPLWTSKNXCvzURSi3WrkywJ1qcnYC56Dw1XMrxYZ7Z";
+
 
 class KoNftMigration extends Component {
 
-  childProvider;
-  parentProvider;
-  contract;
-  childContractChainManagerProxy;
-  maticJdkManager
+  exitProcessed = [];
+  nftInLoading = false;
 
   constructor(props) {
     super(props);
@@ -39,19 +29,39 @@ class KoNftMigration extends Component {
       nftList: [],
       chainId: 0,
       burnTxHashList: [],
+      exitProcessedChanged: false,
+      refresh: false,
+      mintInProgress: false,
     };
-
-    this.childProvider = new ethers.providers.JsonRpcProvider(maticRPC);
-    this.parentProvider = new ethers.providers.JsonRpcProvider(ethereumRPC);
-    this.maticJdkManager = new MaticJdkManager();
   }
 
   componentDidMount() {
-    this.initBurnTxHashList(() => {
-      this.initSigner();
-      this.addEventListenerAccountsChanged()
-      this.refresh();
+    this.init();
+  }
+
+  componentDidUpdate(prevProps, prevState, snapshot) {
+    const {props} = this;
+    if (prevProps.contract !== props.contract) {
+      console.log("Reload Gallery data")
+      this.init();
+    }
+  }
+
+  init = () => {
+    const state = {...this.state};
+    state.nftList = [];
+    this.setState(state, () => {
+      this.initBurnTxHashList(() => {
+        // this.initExitProcessed();
+        this.refresh();
+      });
     });
+  }
+
+  setMintInProgress = (inProgress, callback) => {
+    const state = {...this.state};
+    state.mintInProgress = inProgress;
+    this.setState(state, callback);
   }
 
   initBurnTxHashList(callback) {
@@ -63,21 +73,46 @@ class KoNftMigration extends Component {
       state.burnTxHashList = burnTxHashList;
       this.setState(state, callback);
     } else {
-      this.addBurnTxHash(4,{transactionHash: "0x4d658967255f686c46c278295db5ce0037741e43b5c52948c221df2200fddaac"})
+      this.addBurnTxHash(4, {transactionHash: "0x4d658967255f686c46c278295db5ce0037741e43b5c52948c221df2200fddaac"})
       callback();
     }
   }
 
+  loadAllExitProcessed() {
+    this.state.burnTxHashList.map((burnTx, index) => {
+      if (burnTx) {
+        const {transactionHash} = burnTx;
+        this.isERC721ExitProcessed(transactionHash, this.state.from).then((isExitProcessedTx) => {
+          this.exitProcessed[index] = isExitProcessedTx;
+          this.setExitProcessedAsChanged();
+        }).catch((error) => {
+          console.error(error);
+        });
+      }
+    });
+  }
+
   initSigner = () => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
-    if (signer) {
-      signer.getAddress().then((address) => {
-        this.setSigner(signer, address);
-      }).catch((error) => {
-        console.log(error);
-      });
-    }
+    return new Promise((resolve, reject) => {
+      try {
+        const provider = this.props.provider;
+        const signer = provider.getSigner();
+        if (signer) {
+          signer.getAddress().then((address) => {
+            this.setSigner(signer, address);
+            resolve();
+          }).catch((error) => {
+            reject(error);
+          });
+        } else {
+          const error = new Error("Signer not loaded.");
+          reject(error);
+        }
+      } catch (error) {
+        reject(error);
+      }
+      ;
+    });
   }
 
   setSigner = (signer, address) => {
@@ -88,40 +123,107 @@ class KoNftMigration extends Component {
     this.refresh();
   }
 
-  addEventListenerAccountsChanged() {
-    window.ethereum.addListener('accountsChanged', () => {
-      this.initSigner();
-    });
+  isExitProcessed = (idNft) => {
+
+    const {transactionHash} = this.state.burnTxHashList[idNft];
+    if (transactionHash && transactionHash !== "") {
+
+      const {chainId, signerAddress} = this.props;
+
+      if (parseInt(chainId) === 80001) {
+
+        this.isERC721ExitProcessed(transactionHash, signerAddress).then((isExitProcessedTx) => {
+          this.exitProcessed[idNft] = isExitProcessedTx;
+          this.setExitProcessedAsChanged();
+          console.log(isExitProcessedTx);
+        }).catch((error) => {
+          console.error(error);
+        });
+
+      } else {
+        const error = new Error("Wrong netdwork. Please select Mumbai.")
+        console.error(error);
+      }
+
+    } else {
+      const error = new Error("Transaction Hash does not exist.")
+      console.error(error);
+    }
+  }
+
+  setExitProcessedAsChanged = () => {
+    const state = {...this.state};
+    state.exitProcessed = !state.exitProcessed;
+    this.setState(state);
+  }
+
+  isERC721ExitProcessed = (transactionHash, from) => {
+    return this.props.maticJdkManager.isERC721ExitProcessed(transactionHash, from);
+  }
+
+  exitWithMetadata = (idNft) => {
+
+    const {transactionHash} = this.state.burnTxHashList[idNft];
+    if (transactionHash && transactionHash !== "") {
+
+      if (parseInt(this.props.chainId) === 80001) {
+        console.log(`Releases the locked tokens and refunds it to the Users account on Ethereum for txHash : ${transactionHash}`);
+        console.log({transactionHash});
+
+        const {signerAddress} = this.props;
+        this.exitERC721WithMetadata(transactionHash, signerAddress);
+      }
+    }
+  }
+
+  exitERC721WithMetadata = (transactionHash, from) => {
+    this.props.maticJdkManager.exitERC721WithMetadata(transactionHash, from).then((exitWithMetadataTx) => {
+      console.log({exitWithMetadataTx});
+      this.refresh();
+    }).catch((error) => {
+      console.error(error);
+    })
   }
 
   exit = (idNft) => {
 
     const {transactionHash} = this.state.burnTxHashList[idNft];
-    console.log("exit", {transactionHash});
-
     if (transactionHash && transactionHash !== "") {
-      if (parseInt(this.state.chainId) === 80001) {
-        // Here we are on Mumbai Network
-        console.log(`Releases the locked tokens and refunds it to the Users account on Ethereum for txHash : ${transactionHash}`);
 
-        // this.maticJdkManager.exitERC721(transactionHash, from).then((exitTx) => {
-        //   console.log({exitTx});
-        //   this.refresh();
-        // }).catch((error) => {
-        //   console.error(error);
-        // });
-        this.exitERC721(transactionHash, this.state.from);
+      if (parseInt(this.props.chainId) === 80001) {
+        console.log(`Releases the locked tokens and refunds it to the Users account on Ethereum for txHash : ${transactionHash}`);
+        console.log({transactionHash});
+
+        const {signerAddress} = this.props;
+        this.exitERC721(transactionHash, signerAddress);
       }
     }
   }
 
   exitERC721 = (transactionHash, from) => {
-    this.maticJdkManager.exitERC721(transactionHash, from).then((exitTx) => {
+    this.props.maticJdkManager.exitERC721(transactionHash, from).then((exitTx) => {
       console.log({exitTx});
       this.refresh();
     }).catch((error) => {
       console.error(error);
     })
+  }
+
+  burnWithMetadata = (tokenId) => {
+    if (parseInt(this.props.chainId) === 80001) {
+      // Here we are on Mumbai Network
+      console.log(`Burn Token with Metadata ${tokenId} in Polygon Contract`);
+
+      const {signerAddress} = this.props;
+
+      this.props.maticJdkManager.burnWithMetadataERC721(REACT_APP_POLYGON_CONTRACT_ADDRESS, tokenId, signerAddress).then((burnTx) => {
+        console.log({burnTx});
+        this.addBurnTxHash(tokenId, burnTx);
+
+      }).catch((error) => {
+        console.error(error);
+      })
+    }
   }
 
   /**
@@ -130,11 +232,13 @@ class KoNftMigration extends Component {
    */
   burn = (tokenId) => {
 
-    if (parseInt(this.state.chainId) === 80001) {
+    if (parseInt(this.props.chainId) === 80001) {
       // Here we are on Mumbai Network
       console.log(`Burn Token ${tokenId} in Polygon Contract`);
 
-      this.maticJdkManager.burnERC721(REACT_APP_POLYGON_CONTRACT_ADDRESS, tokenId, this.state.from).then((burnTx) => {
+      const {signerAddress} = this.props;
+
+      this.props.maticJdkManager.burnERC721(REACT_APP_POLYGON_CONTRACT_ADDRESS, tokenId, signerAddress).then((burnTx) => {
         console.log({burnTx});
         this.addBurnTxHash(tokenId, burnTx);
 
@@ -160,11 +264,13 @@ class KoNftMigration extends Component {
    */
   deposit = (tokenId) => {
 
-    if (parseInt(this.state.chainId) === 5) {
+    const {chainId, signerAddress} = this.props;
+
+    if (parseInt(chainId) === 5) {
       // Here we are on Goerli Network
       console.log(`Deposit Token ${tokenId} in Ethereum Contract`);
 
-      this.maticJdkManager.depositERC721ForUser(REACT_APP_ETHEREUM_CONTRACT_ADDRESS, this.state.from, tokenId).then((depositTx) => {
+      this.props.maticJdkManager.depositERC721ForUser(REACT_APP_ETHEREUM_CONTRACT_ADDRESS, signerAddress, tokenId).then((depositTx) => {
         console.log({depositTx});
         this.refresh();
       }).catch((error) => {
@@ -179,11 +285,13 @@ class KoNftMigration extends Component {
    */
   approve = (tokenId) => {
 
-    if (parseInt(this.state.chainId) === 5) {
+    const {chainId, signerAddress} = this.props;
+
+    if (parseInt(chainId) === 5) {
       // Here we are on Goerli Network
       console.log(`Approve Token ${tokenId} in Ethereum Contract`);
 
-      this.maticJdkManager.approveERC721ForDeposit(REACT_APP_ETHEREUM_CONTRACT_ADDRESS, this.state.from, tokenId).then((approveTx) => {
+      this.props.maticJdkManager.approveERC721ForDeposit(REACT_APP_ETHEREUM_CONTRACT_ADDRESS, signerAddress, tokenId).then((approveTx) => {
         console.log({approveTx});
       }).catch((error) => {
         console.error(error);
@@ -198,17 +306,27 @@ class KoNftMigration extends Component {
    */
   sendMintNFT = async ({uriNFT}) => {
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    if (!this.state.mintInProgress) {
+      this.setMintInProgress(true);
 
-    const instanceContract = this.contract.connect(signer);
-    const resp = await instanceContract.mint(await signer.getAddress(), uriNFT);
-    // const resp = await this.contract.connect(signer)["mint(address,string)"](await signer.getAddress(), uriNFT);
-
-    const tx = await resp.wait();
-    console.log(tx);
-
-    this.refresh();
+      const {signer, signerAddress, contract} = this.props;
+      const instanceContract = contract.connect(signer);
+      // const resp = await instanceContract.mint(signerAddress, uriNFT);
+      instanceContract.mint(signerAddress, uriNFT).then((resp) => {
+        // const tx = await resp.wait();
+        resp.wait().then((tx) => {
+          console.log(tx);
+          this.setMintInProgress(false, this.refresh);
+        }).catch((error) => {
+          this.setMintInProgress(false);
+          console.error(error);
+        });
+      }).catch((error) => {
+        this.setMintInProgress(false);
+        console.error(error);
+      });
+      // const resp = await this.contract.connect(signer)["mint(address,string)"](await signer.getAddress(), uriNFT);
+    }
   }
 
   /**
@@ -216,59 +334,26 @@ class KoNftMigration extends Component {
    */
   refresh = () => {
 
-    if (this.state.signer) {
+    const {provider} = this.props;
+    const signer = provider.getSigner();
 
-      this.ethereumOnChainChanged();
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+    if (signer) {
       provider.getNetwork().then((network) => {
-
-        console.log("network", network);
-        const {chainId} = network;
-        this.setChainId(chainId);
-
-        // Instanciate contract
-        if (chainId === 5) {
-          this.contract = new ethers.Contract(REACT_APP_ETHEREUM_CONTRACT_ADDRESS, abiRoot, this.parentProvider);
-          console.log("contract", this.contract);
-
-        } else if (chainId === 80001) {
-          console.log({chainId});
-          console.log({REACT_APP_POLYGON_CONTRACT_ADDRESS});
-          this.contract = new ethers.Contract(REACT_APP_POLYGON_CONTRACT_ADDRESS, abiChild, this.childProvider);
-          console.log("contract", this.contract);
-        }
-
-        this.loadTotalSuply();
-
         this.loadNftList();
-
       }).catch((error) => {
         console.error(error);
       })
     }
   }
 
-  ethereumOnChainChanged = () => {
-    window.ethereum.on('chainChanged', (chainId) => {
-      this.resetStateOnChangeChain();
-      console.log({chainId});
-      this.setChainId(chainId);
-      this.refresh();
-    });
-  }
-
-  resetStateOnChangeChain() {
-    this.contract = null;
+  resetStateOnChangeChain(callback) {
     const state = {...this.state};
     state.signer = null;
     state.from = null;
     state.contractTotalSupply = 0;
     state.balanceOf = 0;
     state.nftList = [];
-    state.chainId = 0;
-    this.setState(state);
-    this.initSigner();
+    this.setState(state, callback);
   }
 
   loadTotalSuply = () => {
@@ -280,45 +365,83 @@ class KoNftMigration extends Component {
 
   loadNftList = () => {
 
-    if (this.state.signer) {
+    const {signer, contract} = this.props;
+    if (contract && signer && this.nftInLoading === false) {
+      this.nftInLoading = true;
+
+      console.log("Load all user Nft is started.");
 
       this.getBalanceOf().then(async (balanceOf) => {
 
         console.log({balanceOf});
-        this.setBalanceOf(balanceOf);
-
         if (balanceOf && balanceOf > 0) {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const signer = provider.getSigner();
+          this.setBalanceOf(balanceOf);
 
-          let nftList = [];
+          let promises = [];
           for (let i = 0; i < balanceOf; i++) {
-            const tokenIdBingInt = await this.contract.connect(this.state.signer).tokenOfOwnerByIndex(await signer.getAddress(), i);
-            const tokenId = tokenIdBingInt.toNumber();
-            const uri = await this.getTokenUri(tokenId);
-            const token = new KoNFT(tokenId, uri);
-            nftList.push(token);
+            promises.push(this.loadNftToken(i));
           }
 
-          this.setNftList(nftList);
+          Promise.all(promises).then((promisesValues) => {
+
+            promisesValues.sort(function (a, b) {
+              return a.id - b.id;
+            });
+
+            this.setNftList(promisesValues);
+            this.nftInLoading = false;
+            this.refreshState();
+          }).catch((errors) => {
+            this.setNftList([]);
+            console.error(errors);
+            this.nftInLoading = false;
+            this.refreshState();
+          });
+
         } else {
-          this.setNftList([]);
+          console.log("error setNftList : invalid balance");
+          this.nftInLoading = false;
+          this.refreshState();
         }
       });
     }
   }
 
-  setChainId = (chainId) => {
+  refreshState() {
     const state = {...this.state};
-    state.chainId = chainId;
+    state.refresh = !state.refresh;
     this.setState(state);
+  }
+
+  loadNftToken(index) {
+    const {signer, signerAddress, contract} = this.props;
+    return new Promise((resolve, reject) => {
+      contract.connect(signer).tokenOfOwnerByIndex(signerAddress, index).then((tokenIdBingInt) => {
+
+        const tokenId = tokenIdBingInt.toNumber();
+        // console.log({tokenId});
+        this.getTokenUri(tokenId).then((uri) => {
+
+          // console.log({uri});
+          const token = new KoNFT(tokenId, uri);
+          console.log({token});
+          resolve(token);
+
+        }).catch((error) => {
+          reject(error);
+        });
+      }).catch((error) => {
+        reject(error);
+      });
+    });
   }
 
   getBalanceOf = async () => {
     let balance = 0;
-    if (this.state.signer) {
+    const {signer, signerAddress, contract} = this.props;
+    if (contract && signer) {
 
-      const balanceOf = await this.contract.connect(this.state.signer).balanceOf(this.state.signer.getAddress());
+      const balanceOf = await contract.connect(signer).balanceOf(signerAddress);
       balance = balanceOf.toNumber();
     }
     return balance;
@@ -331,18 +454,14 @@ class KoNftMigration extends Component {
   }
 
   getTotalSuply = async () => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
-
-    const totalSupply = await this.contract.connect(signer).totalSupply();
+    const {signer, contract} = this.props;
+    const totalSupply = await contract.connect(signer).totalSupply();
     return totalSupply.toNumber();
   }
 
   getTokenUri = async (tokenId) => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
-
-    return await this.contract.connect(signer).tokenURI(tokenId);
+    const {signer, contract} = this.props;
+    return await contract.connect(signer).tokenURI(tokenId);
   }
 
   setContractTotalSupply = (totalSupply) => {
@@ -368,41 +487,76 @@ class KoNftMigration extends Component {
         <BurnTxHashList
           burnTxHashList={this.state.burnTxHashList}
           exit={this.exit}
+          exitWithMetadata={this.exitWithMetadata}
+          isExitProcessed={this.isExitProcessed}
+          exitProcessed={this.exitProcessed}
         />
       );
     }
+  }
+
+  renderCententButtonRefresh() {
+    if (this.nftInLoading) {
+      return (
+        <Spinner/>
+      );
+    } else {
+      return "Refresh List";
+    }
+  }
+
+  renderCententButtonMint() {
+    if (this.state.mintInProgress) {
+      return (
+        <Spinner colorClassName={"text-primary"}/>
+      );
+    } else {
+      return "Mint Token";
+    }
+  }
+
+  renderMenu() {
+    return (
+      <div>
+
+        {/* Mint Button */}
+        <button className={"btn btn-outline-primary ms-1 me-1"} onClick={this.handleMint}>
+          {this.renderCententButtonMint()}
+        </button>
+
+        {/* Refresh Button */}
+        <button className={"btn btn-outline-secondary ms-1"} onClick={() => {
+          this.nftInLoading = false;
+          this.loadNftList();
+        }}>
+          {this.renderCententButtonRefresh()}
+        </button>
+
+      </div>
+    );
   }
 
   render() {
 
     return (
       <div>
-        <h2>Contract</h2>
-        <div>{REACT_APP_POLYGON_CONTRACT_ADDRESS}</div>
-        <div>{this.state.contractTotalSupply} NFT on Contract</div>
-
-        <h2>NFT Menu</h2>
-        You have {this.state.balanceOf} NFT
         <div>
-          <button onClick={this.handleMint}>
-            Mint Token
-          </button>
+          <VscFileBinary size={18}/> {this.props.contract.address}
         </div>
 
-        <div>
-          <button onClick={this.refresh}>
-            Refresh Token List
-          </button>
-        </div>
+        <h2>Menu <span className={"badge bg-secondary m-1"}
+                       style={{fontSize: "large"}}>{this.state.balanceOf} NFT</span></h2>
+        {this.renderMenu()}
 
-        <h2>Yours NFT</h2>
         <KoNftList
-          chainId={this.state.chainId}
+          chainId={this.props.chainId}
           nftList={this.state.nftList}
           approve={this.approve}
           deposit={this.deposit}
           burn={this.burn}
+          burnWithMetadata={this.burnWithMetadata}
           exit={this.exit}
+          exitWithMetadata={this.exitWithMetadata}
         />
 
         {this.renderBurnTransactionList()}

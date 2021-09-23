@@ -2,22 +2,28 @@ import React from 'react';
 
 const BurnTxHashList = (props) => {
 
-  const {burnTxHashList, exit} = props;
+  const {burnTxHashList, exit, exitWithMetadata, isExitProcessed, exitProcessed} = props;
 
   const renderExitButtons = (idNft) => {
     return (
       <div>
 
-        <button onClick={() => {
-          exit(idNft);
+        {/*<button className={"btn btn-outline-danger me-1"} onClick={() => {*/}
+        {/*  exit(idNft);*/}
+        {/*}}>*/}
+        {/*  Exit*/}
+        {/*</button>*/}
+
+        <button className={"btn btn-outline-danger ms-1 me-1"} onClick={() => {
+          exitWithMetadata(idNft);
         }}>
-          Exit
+          Exit Metadata
         </button>
 
-        <button onClick={() => {
-          //isERC721ExitProcessed
+        <button className={"btn btn-outline-primary ms-1"} onClick={() => {
+          isExitProcessed(idNft);
         }}>
-          Processed
+          Status
         </button>
 
       </div>
@@ -25,11 +31,11 @@ const BurnTxHashList = (props) => {
   }
 
   const renderBurnTxHash = (burnTxHash, index) => {
-    console.log({burnTxHash});
     return (
       <tr key={index}>
-        <td>{index}</td>
+        <td className={"text-center"}>{index}</td>
         <td>{burnTxHash.transactionHash}</td>
+        <td>{exitProcessed[index] ? "Finised" : ""}</td>
         <td>
           {renderExitButtons(index)}
         </td>
@@ -50,11 +56,12 @@ const BurnTxHashList = (props) => {
   return (
     <div>
       <h2>Burn Transaction List</h2>
-      <table>
+      <table className={"table table-sm"}>
         <thead>
         <tr>
-          <th style={{borderBottom: "1px solid white"}}>Token ID</th>
+          <th className={"text-center"} style={{borderBottom: "1px solid white"}}>Token ID</th>
           <th style={{borderBottom: "1px solid white", textAlign: "start"}}>Hash</th>
+          <th style={{borderBottom: "1px solid white", textAlign: "start"}}>Status</th>
           <th style={{borderBottom: "1px solid white", textAlign: "start"}}>Actions</th>
         </tr>
         </thead>

@@ -10,8 +10,6 @@ const {
   REACT_APP_MUMBAI_RPC,
 } = process.env;
 
-console.log("env",process.env);
-
 const parentRpc = `${REACT_APP_GOERLI_RPC}${REACT_APP_INFURA_PROJECT_ID}`;
 const childRpc = `${REACT_APP_MUMBAI_RPC}${REACT_APP_MATIC_VIGIL_APP_ID}`;
 
@@ -68,6 +66,21 @@ class MaticJdkManager {
     return this.maticPOSClient.burnERC721(contractAddress, tokenId, {from});
   }
 
+  burnWithMetadataERC721(contractAddress, tokenId, from) {
+    console.log({contractAddress, tokenId, from});
+    return this.koBurnWithMetadataERC721(contractAddress, tokenId, {from});
+  }
+
+  async koBurnWithMetadataERC721(childToken, tokenId, options) {
+    const childTokenContract = this.maticPOSClient.getPOSERC721TokenContract(childToken);
+    const txObject = childTokenContract.methods.withdrawWithMetadata(tokenId);
+    const web3Options = await this.maticPOSClient.web3Client.fillOptions(txObject, false /* onRootChain */, options);
+    if (web3Options.encodeAbi) {
+      return Object.assign(web3Options, { data: txObject.encodeAbi(), to: childToken });
+    }
+    return this.maticPOSClient.web3Client.send(txObject, web3Options, options);
+  }
+
   /**
    * Releases the locked tokens and refunds it to the Users account on Ethereum
    * @param burnTxHash
@@ -75,7 +88,15 @@ class MaticJdkManager {
    * @returns {*}
    */
   exitERC721(burnTxHash, from) {
+    return this.maticPOSClient.exitERC721(burnTxHash, {from});
+  }
+
+  exitERC721WithMetadata(burnTxHash, from) {
     return this.maticPOSClient.exitERC721WithMetadata(burnTxHash, {from});
+  }
+
+  isERC721ExitProcessed(burnTxHash, from) {
+    return this.maticPOSClient.isERC721ExitProcessed(burnTxHash, {from});
   }
 
 }
